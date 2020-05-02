@@ -21,9 +21,9 @@ bool old_dir = 0;
 
 short int state = 0; 
 
-short int delay_length = 10;
+short int delay_length = 0;
 
-bool C1 = LOW;
+bool C1 = LOW; //value for the output pins
 bool C2 = LOW;
 bool C3 = LOW;
 
@@ -51,8 +51,7 @@ void loop() {
       digitalWrite(c2Pin, LOW);
       digitalWrite(c3Pin, LOW);
   }
- }
-
+}
 
 /*
 decode_speed:
