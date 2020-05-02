@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+	<head>
+	</head>
+<!--<body onload="setInterval(refresh, 500);">--> 
+<body>
+ <img src="cat.jpg" alt="Cute Cat" height="142" width="142">
+	<br />
+<p>Click the button to turn on and off the LED.</p>
+	
+	<form id="LED_Selection" action="">
+	<input type="radio" name="LEDCheck" value="off" id="off" />
+	<label for="off">LED Off</label><br>
+	<input type="radio" name="LEDCheck" value="on" id="on" />
+	<label for="on">LED On</label><br>
+	</form>
+	<br />
+		<div id="sensor_content">Loading data from Arduino...</div>
+		<div id="LED_content"></div>
+		<div id="LED_content_test"></div>
+		<script type="text/javascript" src="js/zepto.min.js"></script>
+		<script type="text/javascript" src="js/jsHere.js"></script>	
+
+	</body>
+
+</html>
+
