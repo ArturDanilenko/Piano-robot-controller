@@ -7,18 +7,21 @@ The state machine represents the control system that would be used
 to control a reluctance motor with 3 pole pairs.
 
 */
-const int dirPin = 3;
+const int dirPin = 3; //direction pin
 
-const int c1Pin = 13;
-const int c2Pin = 12;
-const int c3Pin = 11;
+const short int speedwire1 = 5; //bits of an encoded number representing speed
+const short int speedwire2 = 6;
+const short int speedwire3 = 7;
+
+const int c1Pin = 13; //pole pair 1
+const int c2Pin = 12; //pole pair 2
+const int c3Pin = 11; //pole pair 3
 
 bool old_dir = 0;
-bool dir = HIGH;
 
 short int state = 0; 
 
-short int speed = 10;
+short int delay_length = 10;
 
 bool C1 = LOW;
 bool C2 = LOW;
@@ -26,20 +29,23 @@ bool C3 = LOW;
 
 void setup() {
   pinMode(dirPin,INPUT);
+  pinMode(speedwire1,INPUT);
+  pinMode(speedwire2,INPUT);
+  pinMode(speedwire3,INPUT);
   
   pinMode(c1Pin,OUTPUT);
   pinMode(c2Pin,OUTPUT);
   pinMode(c3Pin,OUTPUT);
 }
 
-void loop() {
-  dir = digitalRead(dirPin);
-  choose_pins_to_enable(dir);
-  if(speed>0)   {
+void loop() {  
+  choose_pins_to_enable(digitalRead(dirPin));
+  delay_length = decode_speed(digitalRead(speedwire1),digitalRead(speedwire2),digitalRead(speedwire3));
+  if(delay_length>0)   {
       digitalWrite(c1Pin, C1);
       digitalWrite(c2Pin, C2);
       digitalWrite(c3Pin, C3);
-      delay(150); //overloaded arduinos start acting unpredictably
+      delay(delay_length); //overloaded arduinos start acting unpredictably
   } else {
       digitalWrite(c1Pin, LOW);
       digitalWrite(c2Pin, LOW);
@@ -49,7 +55,24 @@ void loop() {
 
 
 /*
-The choose pins to enable:
+decode_speed:
+Function decodes binary number received into a delay which allows the board to act as a PWM module
+If all bits are low - returns 0 signaling to turn off the motor
+otherwise will return a delay with maximum of 1 second (1000ms) or lowest of 125ms
+Arguments:
+  bitx - part of a 3 bit number forming a single bus 3b'bit1_bit2_bit3
+*/
+
+ 
+short int decode_speed(bool bit1, bool bit2, bool bit3){
+  if (bit1+bit2+bit3>0) return 1000-(bit1*4+bit2*2+bit3)*125;
+  else {
+    return 0;
+  }
+}
+
+/*
+choose pins to enable:
 This function will be called every main loop run given that the input speed is > 0
 Depending on the state it chooses the pins to be enabled depending on the desired direction of the motor spin.
 Arguments: 
