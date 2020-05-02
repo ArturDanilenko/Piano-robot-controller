@@ -1,4 +1,5 @@
 #include <Console.h>
+#include <Bridge.h>
 #include "math.h"
 #include "definitions.h"
 
@@ -7,13 +8,13 @@ Registers for the data passed from the text file.
 ===================================================================================*/
 double stack[100];
 double stack2[100]; 
-short int stack_counter = 0;
+short int stack_counter = 5; //for debugging is set to 5
 
 //FLAG FOR END OF RECEVING
 bool done = 0;
 
 //INITIAL STATE
-short int state = RCV;
+short int state = PLAY;
 
 /*===================================================================================
 ENCODER VARIABLES
@@ -66,23 +67,27 @@ double angle_in_r, angle_out_r, setpoint_r;
 double cumulative_error_r, rate_error_r;
 
 /*============================================================================
-pwm VARIABLES
+UNO control
 ===================================================================================*/
 
-volatile bool R_Motor_F_state = LOW;
-volatile bool R_Motor_R_state = LOW;
-volatile bool L_Motor_F_state = LOW;
-volatile bool L_Motor_R_state = LOW;
-short int direction_motor_R = 5;
-short int direction_motor_L = 6;
-short int Motor_L_forward = 2;
-short int Motor_L_reverse = 3;
 short int speedR = 20;
 short int speedL = 20;
+const short int dir_pin_1 = 12;
+const short int dir_pin_2 = 13;
 
-short int motorCounter;
-short int motorCounter2=0;
+const short int speed_1_bit_1_pin = 2;
+const short int speed_1_bit_2_pin = 3;
+const short int speed_1_bit_3_pin = 4;
+const short int speed_2_bit_1_pin = 5;
+const short int speed_2_bit_2_pin = 6;
+const short int speed_2_bit_3_pin = 7;
 
+bool speed_1_bit_1_value = 0;
+bool speed_1_bit_2_value = 0;
+bool speed_1_bit_3_value = 1;
+bool speed_2_bit_1_value = 0;
+bool speed_2_bit_2_value = 0;
+bool speed_2_bit_3_value = 1;
 short int posDiff = 0;
 //int currentPos_L;
 short int desiredPos_R = 5;    //indicate desired position
@@ -105,38 +110,36 @@ PIN CONFIGURATION AND INITIALIZATION OF SOME VARIABLES
 
 
 void setup() { 
-   //PWM INITS
-   //Timer1.initialize(1000);
-   //Timer1.attachInterrupt(timerISR);
-
-  Bridge.begin();
-  Console.begin();
-  
-  // pinMode(Motor_R_forward, OUTPUT); //MOTOR DRIVERS
-  // pinMode(Motor_R_reverse, OUTPUT);
-   //pid
-   angle_in_l = analogRead(A0); 
+   //angle_in_l = analogRead(A0); 
    setpoint_l = 800;                          //set point determine setpoint
 
-   angle_in_r = analogRead(A1);
+   //angle_in_r = analogRead(A1);
    setpoint_r = 600; 
-
-   pinMode(2, OUTPUT); //LED 1
-   pinMode(3, OUTPUT); //LED 2
-
-   pinMode(5, OUTPUT); //motor 2 F
-   pinMode(6, OUTPUT); //motor 2 R
-
-   pinMode(4, INPUT); //BUTTON FOR THE RESET
-
+   stack[0] = 11.25;
+   stack[1] = 22.5;
+   stack[2] = 33.75;
+   stack[3] = 45;
+   stack[4] = 33.75;
    pinMode(8, INPUT); //ENCODER 1 output A
    pinMode(9, INPUT); // encoder 1 output B
 
    pinMode(10, INPUT); //ENCODER 2 output A
    pinMode(11, INPUT); // encoder 2 output B
 
-   pinMode(13,OUTPUT); //DEBUG LED
+   pinMode(speed_1_bit_1_pin,OUTPUT);
+   pinMode(speed_1_bit_2_pin,OUTPUT);
+   pinMode(speed_1_bit_3_pin,OUTPUT);
+   pinMode(speed_2_bit_1_pin,OUTPUT);
+   pinMode(speed_2_bit_2_pin,OUTPUT);
+   pinMode(speed_2_bit_3_pin,OUTPUT);
 
+   pinMode(dir_pin_1,OUTPUT);
+   pinMode(dir_pin_2,OUTPUT);
+   
+   pinMode(13,OUTPUT); //DEBUG LED
+   Bridge.begin();
+   Console.begin();
+   while(!Console);
    Serial.begin(9600); // Turn the Serial Protocol ON
 
    laststate_a = digitalRead(8); //initialize the laststate to the current state of the encoder  //looks unused
@@ -169,7 +172,7 @@ void setup() {
        lastordernum2 = 3;
     }
 
-    stack[0] = 1;
+    //stack[0] = 1;
 }
 
 void loop() {
@@ -299,23 +302,43 @@ void loop() {
           ========================================================*/
           //if(direction){ //checks if the motor supposed to go up or down 
           delay(1);
-            if(done_flag2){
+            if(done_flag2||1){
               if (angle_out_r>0){
                // R_Motor_F_state = LOW;
-                digitalWrite(direction_motor_R,LOW);
+                digitalWrite(dir_pin_1,LOW);
+                speed_1_bit_1_value = 0;
+                speed_1_bit_2_value = 0;
+                speed_1_bit_3_value = 1;
+                digitalWrite(speed_1_bit_1_pin,speed_1_bit_1_value);
+                digitalWrite(speed_1_bit_2_pin,speed_1_bit_2_value);
+                digitalWrite(speed_1_bit_3_pin,speed_1_bit_3_value);
                // R_Motor_R_state = HIGH;
               }
               else if (angle_out_r<0){
               //  R_Motor_F_state = HIGH;
                 //R_Motor_R_state = LOW;
-                digitalWrite(direction_motor_R,HIGH);
+                digitalWrite(dir_pin_1,HIGH);
+                speed_1_bit_1_value = 0;
+                speed_1_bit_2_value = 0;
+                speed_1_bit_3_value = 1;
+                digitalWrite(speed_1_bit_1_pin,speed_1_bit_1_value);
+                digitalWrite(speed_1_bit_2_pin,speed_1_bit_2_value);
+                digitalWrite(speed_1_bit_3_pin,speed_1_bit_3_value);
               }
               else { //if the current angled surpassed the desired one. We mark this part as complete and move on to the next note.
+                speed_1_bit_1_value = 0;
+                speed_1_bit_2_value = 0;
+                speed_1_bit_3_value = 0;
+                digitalWrite(speed_1_bit_1_pin,speed_1_bit_1_value);
+                digitalWrite(speed_1_bit_2_pin,speed_1_bit_2_value);
+                digitalWrite(speed_1_bit_3_pin,speed_1_bit_3_value);
+                done_flag2 = 1; //cheesing 
+                done_flag1 = 1; //cheesing
                 if(done_flag2&&done_flag1){
-                  Serial.print("12 done in 1 \n");
+                  //Serial.print("12 done in 1 \n");
                   if(retract_flag1){
                     j++;
-                    Serial.print("j incremented \n");
+                    //Serial.print("j incremented \n");
                     retract_flag1 = 0;
                   } else {
                     retract_flag1 = 1;
@@ -323,12 +346,12 @@ void loop() {
 
                   if(retract_flag2){
                     k++;
-                    Serial.print("k incremented \n");
+                    //Serial.print("k incremented \n");
                     retract_flag2 = 0;
                   } else {
                     retract_flag2 = 1;
                   }
-                  Serial.print("Flags are cleared, transition raised \n");
+                  //Serial.print("Flags are cleared, transition raised \n");
                   done_flag2 = 0;
                   done_flag1 = 0;
                   transition_flag = 1;
@@ -344,7 +367,7 @@ void loop() {
                   }
                   done_flag1 = 1;
                   if(change1_flag){
-                    Serial.print("flag 1 raised \n");
+                    //Serial.print("flag 1 raised \n");
                   }
                 }
               }
@@ -353,20 +376,28 @@ void loop() {
               if (angle_out_l>0){
                 //L_Motor_F_state = HIGH;
                 //L_Motor_R_state = LOW;
-                digitalWrite(direction_motor_L,LOW);
+                digitalWrite(dir_pin_2,LOW);
+                digitalWrite(speed_2_bit_1_pin,speed_2_bit_1_value);
+                digitalWrite(speed_2_bit_2_pin,speed_2_bit_2_value);
+                digitalWrite(speed_2_bit_3_pin,speed_2_bit_3_value);
               }
               else if (angle_out_l<0){
                 //L_Motor_F_state = LOW;
                 //L_Motor_R_state = HIGH;
-                digitalWrite(direction_motor_L,HIGH);
+                digitalWrite(dir_pin_2,LOW);
+                digitalWrite(speed_2_bit_1_pin,speed_2_bit_1_value);
+                digitalWrite(speed_2_bit_2_pin,speed_2_bit_2_value);
+                digitalWrite(speed_2_bit_3_pin,speed_2_bit_3_value);
               }
               else { //if the current angled surpassed the desired one. We mark this part as complete and move on to the next note.
-              
+                speed_2_bit_1_value = 0;
+                speed_2_bit_2_value = 0;
+                speed_2_bit_3_value = 0;
                 if(done_flag1&&done_flag2){
-                  Serial.print("12 done in 2 \n");
+                  //Serial.print("12 done in 2 \n");
                   if(retract_flag2){
                     k++;
-                    Serial.print("k2 incremented \n");
+                    //Serial.print("k2 incremented \n");
                     retract_flag2 = 0;
                   } else {
                     retract_flag2 = 1;
@@ -374,7 +405,7 @@ void loop() {
 
                   if(retract_flag1){
                     j++;
-                    Serial.print("j2 incremented \n");
+                    //Serial.print("j2 incremented \n");
                     retract_flag1 = 0;
                   } else {
                     retract_flag1 = 1;
@@ -382,7 +413,7 @@ void loop() {
                   done_flag1 = 0;
                   done_flag2 = 0;
                   trans2_flag = 1;
-                  Serial.print("flags cleared in 2 \n");
+                  //Serial.print("flags cleared in 2 \n");
                 }
             // Serial.print("uwu");
                // L_Motor_F_state = LOW;
@@ -395,7 +426,7 @@ void loop() {
                 if(!transition_flag&&!trans2_flag){
                   done_flag2 = 1;
                   if(change2_flag){
-                    Serial.print("flag 2 raised \n");
+                    //Serial.print("flag 2 raised \n");
                   }
                   //Serial.print("flag 2 raised \n");
                 }else {
@@ -416,7 +447,7 @@ void loop() {
 
       case DEBUG:
       
-         if (position < desiredPos_R){  //send right motor forward
+       /*  if (position < desiredPos_R){  //send right motor forward
             R_Motor_F_state = HIGH;
             R_Motor_R_state = LOW;
          }
@@ -430,7 +461,7 @@ void loop() {
             R_Motor_R_state = LOW;
             //digitalWrite(Motor_L_forward, LOW);
             //digitalWrite(Motor_L_reverse, LOW);
-         }
+         }*/
          break;
 
       default: 
@@ -546,7 +577,7 @@ void loop() {
   angle_out_r = computePIDright(currentAngle_r);
   //analogWrite(A4,angle_out_r);
 
-   if(prevPos!=position||encoder2_pos_prev!=encoder2_pos){ //PRINTING FUNCTION. WILL PRINT ONLY IF THE VALUES ARE DIFFERENT
+   if(prevPos!=position||encoder2_pos_prev!=encoder2_pos&&1){ //PRINTING FUNCTION. WILL PRINT ONLY IF THE VALUES ARE DIFFERENT
      /* Serial.print("Position is: ");
       Console.print(position);
       Console.print("\t");
@@ -579,9 +610,9 @@ void loop() {
       Console.print(direction);
       Console.print("\n");*/
 
-      /*Console.print("Current j Value: ");
+      Console.print("Current j Value: ");
       Console.print(j);
-      Console.print("\t");
+      Console.print("\t");/*
 
       Console.print("Current k Value: ");
       Console.print(k);
