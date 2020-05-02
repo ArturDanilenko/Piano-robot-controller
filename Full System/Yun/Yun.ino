@@ -479,107 +479,97 @@ void loop() {
     ============================================================================================*/
 
 
-
-    if(!digitalRead(8)&&!digitalRead(9)){ //00
-       ordernum = 0;
-      } else if(digitalRead(8)&&!digitalRead(9)){//10
-       ordernum = 1;
-      } else if(digitalRead(8)&&digitalRead(9)){//11
-       ordernum = 2;
-      } else {//01
-       ordernum = 3;
-      }
-   if(lastordernum==0){ //EXTRA CHECK TO COUNTER 0 TO 3 AND 3 TO 0 ROLLOVERS
-      if(ordernum == 3){
-         position--;
-      } else if(ordernum == 1){
-         position ++;
-      }
-    } else if(lastordernum==3){
-      if(ordernum==0){
-        position++;
-      }else if(ordernum==2){
-        position--;
-      }
-    } else {
-      if (ordernum>lastordernum){
-         position++;
-      }else if(ordernum<lastordernum){
-         position--;
-      }
-      }
-   lastordernum = ordernum; //MAKE LAST ORDERNUM NEW FOR THE NEXT CYCLE
-   currentAngle_r = posToAngle(position);
+    position = calculate_encoder_rotation(digitalRead(8), digitalRead(9), lastordernum, position);
+    lastordernum = calculate_order_num(digitalRead(8), digitalRead(9));
+    currentAngle_r = posToAngle(position);
 
 
    /*===========================================================================
    Encoder 2 code and CALCULATIONS
    ==================================================================================*/
 
-
-   if(!digitalRead(10)&&!digitalRead(11)){ //00
-       ordernum2 = 0;
-      } else if(digitalRead(10)&&!digitalRead(11)){//10
-       ordernum2 = 1;
-      } else if(digitalRead(10)&&digitalRead(11)){//11
-       ordernum2 = 2;
-      } else {//01
-       ordernum2 = 3;
-      }
-   if(lastordernum2==0){ //EXTRA CHECK TO COUNTER 0 TO 3 AND 3 TO 0 ROLLOVERS
-      if(ordernum2 == 3){
-         encoder2_pos--;
-      } else if(ordernum2 == 1){
-         encoder2_pos ++;
-      }
-    } else if(lastordernum2==3){
-      if(ordernum2==0){
-        encoder2_pos++;
-      }else if(ordernum2==2){
-        encoder2_pos--;
-      }
-    } else {
-      if (ordernum2>lastordernum2){
-         encoder2_pos++;
-      }else if(ordernum2<lastordernum2){
-         encoder2_pos--;
-      }
-      }
-   lastordernum2 = ordernum2; //MAKE LAST ORDERNUM NEW FOR THE NEXT CYCLE
+   encoder2_pos = calculate_encoder_rotation(digitalRead(10), digitalRead(11), lastordernum2, encoder2_pos);
+   lastordernum2 = calculate_order_num(digitalRead(10), digitalRead(11)); //MAKE LAST ORDERNUM NEW FOR THE NEXT CYCLE
    currentAngle_l = posToAngle(encoder2_pos);
 
    
   /*====================================================================
   PID AND ANGLE CALCULATIONS
   ======================================================================*/
-  
-  if(retract_flag1){
-    setpoint_r = 0;
-   // setpoint_l = 0;
-  }else {
-    setpoint_r = stack[j];
-    //setpoint_l = stack[k];
-  }
-
-  if(retract_flag2){
-    setpoint_l = 0;
-  }else {
-    setpoint_l =stack2[k];
-  }
-  
-
-
-
- // setpoint_l = (double)stack[j];    //change to whatever it needs to be 
+  setpoint_r = set_coordinate(retract_flag1, stack[j]);
+  setpoint_l = set_coordinate(retract_flag2, stack2[k]);
+ 
   angle_out_l = computePIDleft(currentAngle_l);
-  //analogWrite(A3,angle_out_l);
-
   angle_out_r = computePIDright(currentAngle_r);
-  //analogWrite(A4,angle_out_r);
 
    if(prevPos!=position||encoder2_pos_prev!=encoder2_pos&&1){ //PRINTING FUNCTION. WILL PRINT ONLY IF THE VALUES ARE DIFFERENT
-     /* Serial.print("Position is: ");
-      Console.print(position);
+      display_properties();
+      prevPos = position;
+      encoder2_pos_prev = encoder2_pos;
+  }
+}
+
+
+
+/*===================================================================================
+SET OF FUNCTIONS FOR ISR, PID AND ANGLES
+===================================================================================*/
+
+short int calculate_encoder_rotation(bool wire_A, bool wire_B, short int ordernum_prev,short int position_old){
+  int short ordernum_current;
+  ordernum_current = calculate_order_num(wire_A,wire_B);
+  if(ordernum_prev==0){ //EXTRA CHECK TO COUNTER 0 TO 3 AND 3 TO 0 ROLLOVERS
+      if(ordernum_current == 3){
+         position_old --;
+      } else if(ordernum_current == 1){
+         position_old ++;
+      }
+    } 
+  else if(ordernum_prev==3){
+      if(ordernum_current==0){
+        position_old++;
+      }else if(ordernum_current==2){
+        position_old--;
+      }
+    } 
+  else {
+      if (ordernum_current>ordernum_prev){
+         position_old++;
+      }else if(ordernum_current<ordernum_prev){
+         position_old--;
+      }
+  }
+  //lastordernum = ordernum_current; //MAKE LAST ORDERNUM NEW FOR THE NEXT CYCLE
+  return position_old;
+}
+
+short int calculate_order_num(bool wire_A, bool wire_B){
+  short int result;
+  if(!wire_A&&!wire_B){ //00
+       result = 0;
+      } 
+    else if(wire_A&&!wire_B){ //10
+       result = 1;
+      } 
+    else if(wire_A&&wire_B){ //11
+       result = 2;
+      } 
+    else {//01
+       result = 3;
+      }
+    return result;
+}
+
+double set_coordinate(bool retract_flag, double value){
+  if(retract_flag){
+    return 0;
+  }else {
+    return value;
+  }
+}
+
+void display_properties(){
+      /*Console.print(position);
       Console.print("\t");
 
       Console.print(" Position 2 is: ");
@@ -658,27 +648,7 @@ void loop() {
       Console.print(transition_flag);
       Console.print("\n");
 
-      prevPos = position;
-      encoder2_pos_prev = encoder2_pos;
-      }
-
-
-
-
-  /*===================================================================================
-  MOTOR CONTROL USING ANGLES 
-  =====================================================================================*/
-
-  
 }
-
-
-
-/*===================================================================================
-SET OF FUNCTIONS FOR ISR, PID AND ANGLES
-===================================================================================*/
-
-
 
 double computePIDleft(double angle_in_l){     
         current_time_l = millis();                //get current time
