@@ -110,69 +110,68 @@ PIN CONFIGURATION AND INITIALIZATION OF SOME VARIABLES
 
 
 void setup() { 
-   //angle_in_l = analogRead(A0); 
-   setpoint_l = 800;                          //set point determine setpoint
+  //angle_in_l = analogRead(A0); 
+  setpoint_l = 800;                          //set point determine setpoint
 
-   //angle_in_r = analogRead(A1);
-   setpoint_r = 600; 
-   stack[0] = 11.25;
-   stack[1] = 22.5;
-   stack[2] = 33.75;
-   stack[3] = 45;
-   stack[4] = 33.75;
-   pinMode(8, INPUT); //ENCODER 1 output A
-   pinMode(9, INPUT); // encoder 1 output B
+  //angle_in_r = analogRead(A1);
+  setpoint_r = 600; 
+  stack[0] = 11.25;
+  stack[1] = 22.5;
+  stack[2] = 33.75;
+  stack[3] = 45;
+  stack[4] = 33.75;
+  pinMode(8, INPUT); //ENCODER 1 output A
+  pinMode(9, INPUT); // encoder 1 output B
+  pinMode(10, INPUT); //ENCODER 2 output A
+  pinMode(11, INPUT); // encoder 2 output B
 
-   pinMode(10, INPUT); //ENCODER 2 output A
-   pinMode(11, INPUT); // encoder 2 output B
+  pinMode(speed_1_bit_1_pin,OUTPUT);
+  pinMode(speed_1_bit_2_pin,OUTPUT);
+  pinMode(speed_1_bit_3_pin,OUTPUT);
+  pinMode(speed_2_bit_1_pin,OUTPUT);
+  pinMode(speed_2_bit_2_pin,OUTPUT);
+  pinMode(speed_2_bit_3_pin,OUTPUT);
 
-   pinMode(speed_1_bit_1_pin,OUTPUT);
-   pinMode(speed_1_bit_2_pin,OUTPUT);
-   pinMode(speed_1_bit_3_pin,OUTPUT);
-   pinMode(speed_2_bit_1_pin,OUTPUT);
-   pinMode(speed_2_bit_2_pin,OUTPUT);
-   pinMode(speed_2_bit_3_pin,OUTPUT);
-
-   pinMode(dir_pin_1,OUTPUT);
-   pinMode(dir_pin_2,OUTPUT);
+  pinMode(dir_pin_1,OUTPUT);
+  pinMode(dir_pin_2,OUTPUT);
    
-   pinMode(13,OUTPUT); //DEBUG LED
-   Bridge.begin();
-   Console.begin();
-   while(!Console);
-   Serial.begin(9600); // Turn the Serial Protocol ON
+  pinMode(13,OUTPUT); //DEBUG LED
+  Bridge.begin();
+  Console.begin();
+  while(!Console);
+  Serial.begin(9600); // Turn the Serial Protocol ON
 
-   laststate_a = digitalRead(8); //initialize the laststate to the current state of the encoder  //looks unused
-   laststate_b = digitalRead(9); 
-   if(!digitalRead(8)&&digitalRead(9)){
-       lastordernum = 0;
-    }
-    else if(digitalRead(8)&&!digitalRead(9)){
-       lastordernum = 1;
-    }
-    else if(digitalRead(8)&&digitalRead(9)){
-       lastordernum = 2;
-    }
-    else {
-       lastordernum = 3;
-    }
+  laststate_a = digitalRead(8); //initialize the laststate to the current state of the encoder  //looks unused
+  laststate_b = digitalRead(9); 
+  if(!digitalRead(8)&&digitalRead(9)){
+    lastordernum = 0;
+  }
+  else if(digitalRead(8)&&!digitalRead(9)){
+    lastordernum = 1;
+  }
+  else if(digitalRead(8)&&digitalRead(9)){
+    lastordernum = 2;
+  }
+  else {
+    lastordernum = 3;
+  }
 
-   laststate_c = digitalRead(10); //initialize the laststate to the current state of the encoder 2
-   laststate_d = digitalRead(11); 
-   if(!digitalRead(10)&&digitalRead(11)){
-       lastordernum2 = 0;
-    }
-    else if(digitalRead(10)&&!digitalRead(11)){
-       lastordernum2 = 1;
-    }
-    else if(digitalRead(10)&&digitalRead(11)){
-       lastordernum2 = 2;
-    }
-    else {
-       lastordernum2 = 3;
-    }
+  laststate_c = digitalRead(10); //initialize the laststate to the current state of the encoder 2
+  laststate_d = digitalRead(11); 
+  if(!digitalRead(10)&&digitalRead(11)){
+    lastordernum2 = 0;
+  }
+  else if(digitalRead(10)&&!digitalRead(11)){
+    lastordernum2 = 1;
+  }
+  else if(digitalRead(10)&&digitalRead(11)){
+    lastordernum2 = 2;
+  }
+  else {
+    lastordernum2 = 3;
+  }
 
-    //stack[0] = 1;
+  //stack[0] = 1;
 }
 
 void loop() {
@@ -303,143 +302,15 @@ void loop() {
           //if(direction){ //checks if the motor supposed to go up or down 
           delay(1);
             if(done_flag2||1){
-              if (angle_out_r>0){
-               // R_Motor_F_state = LOW;
-                digitalWrite(dir_pin_1,LOW);
-                speed_1_bit_1_value = 0;
-                speed_1_bit_2_value = 0;
-                speed_1_bit_3_value = 1;
-                digitalWrite(speed_1_bit_1_pin,speed_1_bit_1_value);
-                digitalWrite(speed_1_bit_2_pin,speed_1_bit_2_value);
-                digitalWrite(speed_1_bit_3_pin,speed_1_bit_3_value);
-               // R_Motor_R_state = HIGH;
-              }
-              else if (angle_out_r<0){
-              //  R_Motor_F_state = HIGH;
-                //R_Motor_R_state = LOW;
-                digitalWrite(dir_pin_1,HIGH);
-                speed_1_bit_1_value = 0;
-                speed_1_bit_2_value = 0;
-                speed_1_bit_3_value = 1;
-                digitalWrite(speed_1_bit_1_pin,speed_1_bit_1_value);
-                digitalWrite(speed_1_bit_2_pin,speed_1_bit_2_value);
-                digitalWrite(speed_1_bit_3_pin,speed_1_bit_3_value);
-              }
-              else { //if the current angled surpassed the desired one. We mark this part as complete and move on to the next note.
-                speed_1_bit_1_value = 0;
-                speed_1_bit_2_value = 0;
-                speed_1_bit_3_value = 0;
-                digitalWrite(speed_1_bit_1_pin,speed_1_bit_1_value);
-                digitalWrite(speed_1_bit_2_pin,speed_1_bit_2_value);
-                digitalWrite(speed_1_bit_3_pin,speed_1_bit_3_value);
-                done_flag2 = 1; //cheesing 
-                done_flag1 = 1; //cheesing
-                if(done_flag2&&done_flag1){
-                  //Serial.print("12 done in 1 \n");
-                  if(retract_flag1){
-                    j++;
-                    //Serial.print("j incremented \n");
-                    retract_flag1 = 0;
-                  } else {
-                    retract_flag1 = 1;
-                  }
-
-                  if(retract_flag2){
-                    k++;
-                    //Serial.print("k incremented \n");
-                    retract_flag2 = 0;
-                  } else {
-                    retract_flag2 = 1;
-                  }
-                  //Serial.print("Flags are cleared, transition raised \n");
-                  done_flag2 = 0;
-                  done_flag1 = 0;
-                  transition_flag = 1;
-                }
-
-              //  R_Motor_F_state = LOW;
-               // R_Motor_R_state = LOW;
-                if(!transition_flag){
-                  if(!done_flag1){
-                    change1_flag = 1;
-                  }else {
-                    change1_flag = 0;
-                  }
-                  done_flag1 = 1;
-                  if(change1_flag){
-                    //Serial.print("flag 1 raised \n");
-                  }
-                }
-              }
+              //right
+              set_speed(angle_out_r, &done_flag1, &done_flag2, &retract_flag1, &retract_flag2, &transition_flag, &trans2_flag, &j, &k, 0);
             }
             if(!done_flag2){
-              if (angle_out_l>0){
-                //L_Motor_F_state = HIGH;
-                //L_Motor_R_state = LOW;
-                digitalWrite(dir_pin_2,LOW);
-                digitalWrite(speed_2_bit_1_pin,speed_2_bit_1_value);
-                digitalWrite(speed_2_bit_2_pin,speed_2_bit_2_value);
-                digitalWrite(speed_2_bit_3_pin,speed_2_bit_3_value);
-              }
-              else if (angle_out_l<0){
-                //L_Motor_F_state = LOW;
-                //L_Motor_R_state = HIGH;
-                digitalWrite(dir_pin_2,LOW);
-                digitalWrite(speed_2_bit_1_pin,speed_2_bit_1_value);
-                digitalWrite(speed_2_bit_2_pin,speed_2_bit_2_value);
-                digitalWrite(speed_2_bit_3_pin,speed_2_bit_3_value);
-              }
-              else { //if the current angled surpassed the desired one. We mark this part as complete and move on to the next note.
-                speed_2_bit_1_value = 0;
-                speed_2_bit_2_value = 0;
-                speed_2_bit_3_value = 0;
-                if(done_flag1&&done_flag2){
-                  //Serial.print("12 done in 2 \n");
-                  if(retract_flag2){
-                    k++;
-                    //Serial.print("k2 incremented \n");
-                    retract_flag2 = 0;
-                  } else {
-                    retract_flag2 = 1;
-                  }
-
-                  if(retract_flag1){
-                    j++;
-                    //Serial.print("j2 incremented \n");
-                    retract_flag1 = 0;
-                  } else {
-                    retract_flag1 = 1;
-                  }
-                  done_flag1 = 0;
-                  done_flag2 = 0;
-                  trans2_flag = 1;
-                  //Serial.print("flags cleared in 2 \n");
-                }
-            // Serial.print("uwu");
-               // L_Motor_F_state = LOW;
-               // L_Motor_R_state = LOW;
-                if(!done_flag2){
-                    change2_flag = 1;
-                  }else {
-                    change2_flag = 0;
-                  }
-                if(!transition_flag&&!trans2_flag){
-                  done_flag2 = 1;
-                  if(change2_flag){
-                    //Serial.print("flag 2 raised \n");
-                  }
-                  //Serial.print("flag 2 raised \n");
-                }else {
-                  transition_flag = 0;
-                }
-                transition_flag = 0;
-                trans2_flag = 0;
-                
-              }  
+                set_speed(angle_out_l, &done_flag2, &done_flag1, &retract_flag2, &retract_flag1, &trans2_flag, &transition_flag, &k, &j, 1);
             }else {
                // L_Motor_F_state = LOW;
                // L_Motor_R_state = LOW;
-              }
+            }
          
           //state = RESET;
           if(j>stack_counter||k>stack_counter) state = RESET;
@@ -467,30 +338,30 @@ void loop() {
       default: 
           state = RESET;
           break;
-    }
+  }
 
 
 
-    //ENCODER READING
-    /*===========================================================================================
-    THERE ARE 4 POSSIBLE POSITIONS WHICH CAN BE ORGANIZED IN AN ORDER FROM 0 - 3
-    AFTER, WE CAN CHECK IF THE NEW POSITION IS ORDER UP OR BEFORE FROM THE PREVIOUS ONE 
-    AND USING THIS WE CAN DETERMINE IF WE ROTATED CW OR CCW
-    ============================================================================================*/
+  //ENCODER READING
+  /*===========================================================================================
+  THERE ARE 4 POSSIBLE POSITIONS WHICH CAN BE ORGANIZED IN AN ORDER FROM 0 - 3
+  AFTER, WE CAN CHECK IF THE NEW POSITION IS ORDER UP OR BEFORE FROM THE PREVIOUS ONE 
+  AND USING THIS WE CAN DETERMINE IF WE ROTATED CW OR CCW
+  ============================================================================================*/
 
 
-    position = calculate_encoder_rotation(digitalRead(8), digitalRead(9), lastordernum, position);
-    lastordernum = calculate_order_num(digitalRead(8), digitalRead(9));
-    currentAngle_r = posToAngle(position);
+  position = calculate_encoder_rotation(digitalRead(8), digitalRead(9), lastordernum, position);
+  lastordernum = calculate_order_num(digitalRead(8), digitalRead(9));
+  currentAngle_r = posToAngle(position);
 
 
-   /*===========================================================================
-   Encoder 2 code and CALCULATIONS
-   ==================================================================================*/
+  /*===========================================================================
+  Encoder 2 code and CALCULATIONS
+  ==================================================================================*/
 
-   encoder2_pos = calculate_encoder_rotation(digitalRead(10), digitalRead(11), lastordernum2, encoder2_pos);
-   lastordernum2 = calculate_order_num(digitalRead(10), digitalRead(11)); //MAKE LAST ORDERNUM NEW FOR THE NEXT CYCLE
-   currentAngle_l = posToAngle(encoder2_pos);
+  encoder2_pos = calculate_encoder_rotation(digitalRead(10), digitalRead(11), lastordernum2, encoder2_pos);
+  lastordernum2 = calculate_order_num(digitalRead(10), digitalRead(11)); //MAKE LAST ORDERNUM NEW FOR THE NEXT CYCLE
+  currentAngle_l = posToAngle(encoder2_pos);
 
    
   /*====================================================================
@@ -502,7 +373,7 @@ void loop() {
   angle_out_l = computePIDleft(currentAngle_l);
   angle_out_r = computePIDright(currentAngle_r);
 
-   if(prevPos!=position||encoder2_pos_prev!=encoder2_pos&&1){ //PRINTING FUNCTION. WILL PRINT ONLY IF THE VALUES ARE DIFFERENT
+  if(prevPos!=position||encoder2_pos_prev!=encoder2_pos&&1){ //PRINTING FUNCTION. WILL PRINT ONLY IF THE VALUES ARE DIFFERENT
       display_properties();
       prevPos = position;
       encoder2_pos_prev = encoder2_pos;
@@ -514,6 +385,117 @@ void loop() {
 /*===================================================================================
 SET OF FUNCTIONS FOR ISR, PID AND ANGLES
 ===================================================================================*/
+void set_speed(
+  double pid_correction,
+  bool *done_flag_self,
+  bool *done_flag_partner,
+  bool *retract_flag_self,
+  bool *retract_flag_partner,
+  bool *trans_flag_self,
+  bool *trans_flag_partner,
+  short int *index_self,
+  short int *index_partner,
+  bool callee_motor
+  ){
+  speed_1_bit_1_value = 0;
+  speed_1_bit_2_value = 0;
+  speed_1_bit_3_value = 1;
+  speed_2_bit_1_value = 0;
+  speed_2_bit_2_value = 0;
+  speed_2_bit_3_value = 1;
+  if (pid_correction>0){
+    
+    //Console.print("uwu");
+    if(callee_motor){
+      digitalWrite(dir_pin_2,LOW);
+      digitalWrite(speed_2_bit_1_pin,speed_2_bit_1_value);
+      digitalWrite(speed_2_bit_2_pin,speed_2_bit_2_value);
+      digitalWrite(speed_2_bit_3_pin,speed_2_bit_3_value);
+    }else{
+      digitalWrite(dir_pin_1,LOW);
+      digitalWrite(speed_1_bit_1_pin,speed_2_bit_1_value);
+      digitalWrite(speed_1_bit_2_pin,speed_2_bit_2_value);
+      digitalWrite(speed_1_bit_3_pin,speed_2_bit_3_value);
+    }
+  }
+  else if (pid_correction<0){
+    //Console.print("awa");
+    if(callee_motor){
+      digitalWrite(dir_pin_2,HIGH);
+      digitalWrite(speed_2_bit_1_pin,speed_2_bit_1_value);
+      digitalWrite(speed_2_bit_2_pin,speed_2_bit_2_value);
+      digitalWrite(speed_2_bit_3_pin,speed_2_bit_3_value);
+    }else{
+      digitalWrite(dir_pin_1,HIGH);
+      digitalWrite(speed_1_bit_1_pin,speed_2_bit_1_value);
+      digitalWrite(speed_1_bit_2_pin,speed_2_bit_2_value);
+      digitalWrite(speed_1_bit_3_pin,speed_2_bit_3_value);
+    }
+  }
+  else { //if the current angled surpassed the desired one. We mark this part as complete and move on to the next note.
+    speed_2_bit_1_value = 0;
+    speed_2_bit_2_value = 0;
+    speed_2_bit_3_value = 0;
+    if(!callee_motor){
+      *done_flag_partner = 1;
+      *done_flag_self = 1;
+    }
+    if(*done_flag_partner&&*done_flag_self){
+      //Serial.print("12 done in 2 \n");
+      if(*retract_flag_self){
+        *index_self=*index_self+1;
+        Console.print("qwq");
+        //Serial.print("k2 incremented \n");
+        *retract_flag_self = 0;
+      } else {
+        *retract_flag_self = 1;
+      }
+
+      if(*retract_flag_partner){
+        *index_partner++;
+        //Serial.print("j2 incremented \n");
+        *retract_flag_partner = 0;
+      } else {
+        *retract_flag_partner = 1;
+      }
+      *done_flag_partner = 0;
+      *done_flag_self = 0;
+      *trans_flag_self = 1;
+    }
+    if(callee_motor){//1 = 2, 0 = 1
+      handle_transition_2();
+    }else {
+      handle_transition_1();
+    }
+    *trans_flag_partner = 0;
+    *trans_flag_self = 0;        
+  }  
+}
+void handle_transition_1(){
+  if(!transition_flag){
+     done_flag1 = 1;
+  }
+}
+void handle_transition_2(){
+  if(!transition_flag&&!trans2_flag){
+    done_flag2 = 1;
+  }
+  else {
+    transition_flag = 0;
+  }
+}
+
+/*
+calculate_encoder_rotation:
+Given the encoder outputs, their previous position and their state Calculates
+which way has the encoder rotated and returns an integer value for the new position
+Arguments: 
+  wire_X: encoder outputs representing the current state
+  ordernum_prev: previous state of the encoder, based on this we can find whether 
+encoder rotated CW or CCW
+  position_old: this value is incremented or decremented depending where has the encoder rotated and 
+represents encoded angular displacement
+*/
 
 short int calculate_encoder_rotation(bool wire_A, bool wire_B, short int ordernum_prev,short int position_old){
   int short ordernum_current;
@@ -543,6 +525,14 @@ short int calculate_encoder_rotation(bool wire_A, bool wire_B, short int ordernu
   return position_old;
 }
 
+/*
+calculate_order_num:
+Calculates the current output of the encoder based on two bit signal. Produced value is used in calculating the rotation
+of the encoder
+ardguments: 
+  wire_X: 1 bit value representing a state of the encoder
+*/
+
 short int calculate_order_num(bool wire_A, bool wire_B){
   short int result;
   if(!wire_A&&!wire_B){ //00
@@ -560,6 +550,15 @@ short int calculate_order_num(bool wire_A, bool wire_B){
     return result;
 }
 
+/*
+set_coordinate:
+Depending whether the motor is supposed to retract to the original position, sets the desired point coordinate value to 0
+or the next position in the register
+Arguments:
+  retract_flag: checks whether the motor is supposed to move towards the original position or towards the next point
+  value: in case its supposed to move to the next point, sets the coordinate with the value specified upon call
+*/
+
 double set_coordinate(bool retract_flag, double value){
   if(retract_flag){
     return 0;
@@ -568,9 +567,15 @@ double set_coordinate(bool retract_flag, double value){
   }
 }
 
+/* 
+Function displays properties such as current position, current angle, desired angle, various flags and register VALUES
+Arguments: 
+None
+*/
+
 void display_properties(){
-      /*Console.print(position);
-      Console.print("\t");
+      Console.print(position);
+      Console.print("\t");/*
 
       Console.print(" Position 2 is: ");
       Console.print(encoder2_pos);
