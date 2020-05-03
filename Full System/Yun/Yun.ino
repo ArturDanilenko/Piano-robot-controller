@@ -161,118 +161,34 @@ void loop() {
         digitalWrite(6, LOW);  //Lights up LED 2
         if(digitalRead(4)){ //Checks if the button is not pressed
            digitalWrite(3, LOW); //lights up LED 1
-        }else {
+        }
+        else {
           digitalWrite(3, LOW); //Turns LEDS off if the button is pressed
           digitalWrite(2, LOW);
           state = RCV;
           byteRead = 0;
         }
-        break;
-
-      case RCV: //Receiving text file state
-
-        if (Serial.available()) {
-          
-           byteRead = Serial.read();  /* read the most recent byte */
-           byteRead=byteRead-'0';   //You have to subtract '0' from the read Byte to convert from text to a number.
-           Serial.write(byteRead);
-
-           if(byteRead==0){ //0 will be terminating integer hence raise the done flag upon it
-             // done = 1;
-              digitalWrite(2, LOW); 
-              digitalWrite(3, LOW); 
-           }
-
-           if(byteRead==9&&stack_counter!=0){ //9 will be terminating integer hence raise the done flag upon it
-              state = DECODE;
-           }
-
-           if(byteRead>0&&byteRead!=9){ //9 is a terminating character
-              //digitalWrite((byteRead + 1), HIGH); 
-              stack[stack_counter] = byteRead;
-              stack_counter++;
-           }
-        } 
-        break;
-      /*=========================================
-      DECODES Numbers 1-8 into appropriate angles
-      =========================================*/
-      case DECODE:
-        for(int i = 0; i <= stack_counter; i++){ //Array to store the uploaded notes
-            switch((int)stack[i]){
-              case 1:
-                stack[i]=Note1;
-                stack2[i]=Note1_l;
-                break;
-
-              case 2:
-                stack[i]=Note2;
-                stack2[i]=Note2_l;
-                break;
-
-              case 3:
-                stack[i]=Note3;
-                stack2[i]=Note3_l;
-                break;
-
-              case 4:
-                stack[i]=Note4;
-                stack2[i]=Note4_l;
-                break;
-
-              case 5:
-                stack[i]=Note5;
-                stack2[i]=Note5_l;
-                break;
-
-              case 6:
-                stack[i]=Note6;
-                stack2[i]=Note6_l;
-                break;
-
-              case 7:
-                stack[i]=Note7;
-                stack2[i]=Note7_l;
-                break;
-
-              case 8:
-                stack[i]=Note8;
-                stack2[i]=Note8_l;
-                break;
-
-              default:
-                stack[i]=0;
-                stack2[i]=0;
-                break;
-            }
-        }
-        delay(10);
-        state = PLAY;
-        break;
-
+      break;
       /*========================================================
       THIS STATE RUNS THROUGH THE NOTES DECODED INTO A REGISTER
       ========================================================*/
 
       case PLAY: //Running through notes state
-
         delay(1);
-
         if(done_flag2){ //if arm 2 reached the designed position procede to move arm 1
           set_speed(angle_out_r, &done_flag1, &done_flag2, &retract_flag1, &retract_flag2, &transition_flag, &trans2_flag, &j, &k, 0);
         }
-
         if(!done_flag2){
           set_speed(angle_out_l, &done_flag2, &done_flag1, &retract_flag2, &retract_flag1, &trans2_flag, &transition_flag, &k, &j, 1);
         }        
         if(j>stack_counter||k>stack_counter) state = RESET; //if the stack is fully traversed, end the run
-        break;
+      break;
 
       case DEBUG:   
-        break;
+      break;
       default: 
         state = RESET;
-         break;
+      break;
   }
 
   //ENCODER READING
@@ -318,6 +234,58 @@ void loop() {
 /*===================================================================================
 SET OF FUNCTIONS FOR ISR, PID AND ANGLES
 ===================================================================================*/
+
+
+void decode_notes(){
+  for(int i = 0; i <= stack_counter; i++){ //Array to store the uploaded notes
+    switch((int)stack[i]){
+      case 1:
+        stack[i]=Note1;
+        stack2[i]=Note1_l;
+        break;
+
+      case 2:
+        stack[i]=Note2;
+        stack2[i]=Note2_l;
+        break;
+
+      case 3:
+        stack[i]=Note3;
+        stack2[i]=Note3_l;
+        break;
+
+      case 4:
+        stack[i]=Note4;
+        stack2[i]=Note4_l;
+        break;
+
+      case 5:
+        stack[i]=Note5;
+        stack2[i]=Note5_l;
+        break;
+
+      case 6:
+        stack[i]=Note6;
+        stack2[i]=Note6_l;
+        break;
+
+      case 7:
+        stack[i]=Note7;
+        stack2[i]=Note7_l;
+        break;
+
+      case 8:
+        stack[i]=Note8;
+        stack2[i]=Note8_l;
+        break;
+
+      default:
+        stack[i]=0;
+        stack2[i]=0;
+        break;
+    }
+  }
+}
 
 /*
 set_speed:
