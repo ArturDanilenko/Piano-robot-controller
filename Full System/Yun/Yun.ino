@@ -80,7 +80,7 @@ bool retract_flag1 = 0;
 bool retract_flag2 = 0;
 bool done_flag1 = 0;
 bool done_flag2 = 0;
-bool transition_flag = 0;
+bool transition_flag = 1;
 bool trans2_flag = 0;
 
 /*======================================================================================
@@ -91,11 +91,17 @@ PIN CONFIGURATION AND INITIALIZATION OF SOME VARIABLES
 void setup() { 
   setpoint_l = 800;    //
   setpoint_r = 600; 
-  stack[0] = 11.25;
+  stack[0] = 22.5;
   stack[1] = 22.5;
   stack[2] = 33.75;
   stack[3] = 45;
   stack[4] = 33.75;
+  
+  stack2[0] = 22.5;
+  stack2[1] = 22.5;
+  stack2[2] = 33.75;
+  stack2[3] = 45;
+  stack2[4] = 33.75;
 
   pinMode(encoder_1_A_pin, INPUT); //ENCODER 1 output A
   pinMode(encoder_1_B_pin, INPUT); // encoder 1 output B
@@ -111,6 +117,13 @@ void setup() {
 
   pinMode(dir_pin_1,OUTPUT);
   pinMode(dir_pin_2,OUTPUT);
+
+  digitalWrite(speed_2_bit_1_pin,0);
+  digitalWrite(speed_2_bit_2_pin,0);
+  digitalWrite(speed_2_bit_3_pin,0);
+  digitalWrite(speed_1_bit_1_pin,0);
+  digitalWrite(speed_1_bit_2_pin,0);
+  digitalWrite(speed_1_bit_3_pin,0);
 
   Bridge.begin();
   Console.begin();
@@ -245,7 +258,7 @@ void loop() {
 
         delay(1);
 
-        if(done_flag2||1){ //if arm 2 reached the designed position procede to move arm 1
+        if(done_flag2){ //if arm 2 reached the designed position procede to move arm 1
           set_speed(angle_out_r, &done_flag1, &done_flag2, &retract_flag1, &retract_flag2, &transition_flag, &trans2_flag, &j, &k, 0);
         }
 
@@ -369,18 +382,22 @@ void set_speed(
     }
   }
   else { //if the current angled surpassed the desired one. We mark this part as complete and move on to the next note.
-    speed_2_bit_1_value = 0;
-    speed_2_bit_2_value = 0;
-    speed_2_bit_3_value = 0;
-    if(!callee_motor){
-      *done_flag_partner = 1;
-      *done_flag_self = 1;
+    
+    if(callee_motor){
+      digitalWrite(speed_2_bit_1_pin,0);
+      digitalWrite(speed_2_bit_2_pin,0);
+      digitalWrite(speed_2_bit_3_pin,0);
+    }else {
+      digitalWrite(speed_1_bit_1_pin,0);
+      digitalWrite(speed_1_bit_2_pin,0);
+      digitalWrite(speed_1_bit_3_pin,0);
     }
+    //*done_flag_self = 1;
     if(*done_flag_partner&&*done_flag_self){
       //Serial.print("12 done in 2 \n");
       if(*retract_flag_self){
         *index_self=*index_self+1;
-        Console.print("qwq");
+        //Console.print("qwq");
         //Serial.print("k2 incremented \n");
         *retract_flag_self = 0;
       } else {
@@ -388,7 +405,7 @@ void set_speed(
       }
 
       if(*retract_flag_partner){
-        *index_partner++;
+        *index_partner = *index_partner+1;
         //Serial.print("j2 incremented \n");
         *retract_flag_partner = 0;
       } else {
@@ -400,11 +417,12 @@ void set_speed(
     }
     if(callee_motor){//1 = 2, 0 = 1
       handle_transition_2();
+      *trans_flag_partner = 0;
+      *trans_flag_self = 0;  
     }else {
       handle_transition_1();
     }
-    *trans_flag_partner = 0;
-    *trans_flag_self = 0;        
+          
   }  
 }
 
@@ -422,6 +440,7 @@ void handle_transition_1(){
 void handle_transition_2(){
   if(!transition_flag&&!trans2_flag){
     done_flag2 = 1;
+    Console.print("uwu");
   }
   else {
     transition_flag = 0;
