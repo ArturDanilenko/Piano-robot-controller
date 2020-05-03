@@ -19,12 +19,6 @@ short int state = PLAY;
 /*===================================================================================
 ENCODER VARIABLES
 ===================================================================================*/
-
-bool laststate_a; //encoder 1 output A
-bool laststate_b; //encode 1 output B
-bool laststate_c; //encoder 2 out A
-bool laststate_d; //encode 2 out B
-
 short int ordernum;
 short int lastordernum;
 short int ordernum2;
@@ -72,15 +66,6 @@ UNO control
 
 short int speedR = 20;
 short int speedL = 20;
-const short int dir_pin_1 = 12;
-const short int dir_pin_2 = 13;
-
-const short int speed_1_bit_1_pin = 2;
-const short int speed_1_bit_2_pin = 3;
-const short int speed_1_bit_3_pin = 4;
-const short int speed_2_bit_1_pin = 5;
-const short int speed_2_bit_2_pin = 6;
-const short int speed_2_bit_3_pin = 7;
 
 bool speed_1_bit_1_value = 0;
 bool speed_1_bit_2_value = 0;
@@ -88,10 +73,6 @@ bool speed_1_bit_3_value = 1;
 bool speed_2_bit_1_value = 0;
 bool speed_2_bit_2_value = 0;
 bool speed_2_bit_3_value = 1;
-short int posDiff = 0;
-//int currentPos_L;
-short int desiredPos_R = 5;    //indicate desired position
-//int desiredPos_L;
 
 short int j = 0;
 short int k = 0;
@@ -101,8 +82,6 @@ bool done_flag1 = 0;
 bool done_flag2 = 0;
 bool transition_flag = 0;
 bool trans2_flag = 0;
-bool change1_flag = 0;
-bool change2_flag = 0;
 
 /*======================================================================================
 PIN CONFIGURATION AND INITIALIZATION OF SOME VARIABLES
@@ -110,20 +89,18 @@ PIN CONFIGURATION AND INITIALIZATION OF SOME VARIABLES
 
 
 void setup() { 
-  //angle_in_l = analogRead(A0); 
-  setpoint_l = 800;                          //set point determine setpoint
-
-  //angle_in_r = analogRead(A1);
+  setpoint_l = 800;    //
   setpoint_r = 600; 
   stack[0] = 11.25;
   stack[1] = 22.5;
   stack[2] = 33.75;
   stack[3] = 45;
   stack[4] = 33.75;
-  pinMode(8, INPUT); //ENCODER 1 output A
-  pinMode(9, INPUT); // encoder 1 output B
-  pinMode(10, INPUT); //ENCODER 2 output A
-  pinMode(11, INPUT); // encoder 2 output B
+
+  pinMode(encoder_1_A_pin, INPUT); //ENCODER 1 output A
+  pinMode(encoder_1_B_pin, INPUT); // encoder 1 output B
+  pinMode(encoder_2_A_pin, INPUT); //ENCODER 2 output A
+  pinMode(encoder_2_B_pin, INPUT); // encoder 2 output B
 
   pinMode(speed_1_bit_1_pin,OUTPUT);
   pinMode(speed_1_bit_2_pin,OUTPUT);
@@ -134,49 +111,19 @@ void setup() {
 
   pinMode(dir_pin_1,OUTPUT);
   pinMode(dir_pin_2,OUTPUT);
-   
-  pinMode(13,OUTPUT); //DEBUG LED
+
   Bridge.begin();
   Console.begin();
   while(!Console);
   Serial.begin(9600); // Turn the Serial Protocol ON
 
-  laststate_a = digitalRead(8); //initialize the laststate to the current state of the encoder  //looks unused
-  laststate_b = digitalRead(9); 
-  if(!digitalRead(8)&&digitalRead(9)){
-    lastordernum = 0;
-  }
-  else if(digitalRead(8)&&!digitalRead(9)){
-    lastordernum = 1;
-  }
-  else if(digitalRead(8)&&digitalRead(9)){
-    lastordernum = 2;
-  }
-  else {
-    lastordernum = 3;
-  }
-
-  laststate_c = digitalRead(10); //initialize the laststate to the current state of the encoder 2
-  laststate_d = digitalRead(11); 
-  if(!digitalRead(10)&&digitalRead(11)){
-    lastordernum2 = 0;
-  }
-  else if(digitalRead(10)&&!digitalRead(11)){
-    lastordernum2 = 1;
-  }
-  else if(digitalRead(10)&&digitalRead(11)){
-    lastordernum2 = 2;
-  }
-  else {
-    lastordernum2 = 3;
-  }
-
+  lastordernum = calculate_order_num(digitalRead(8),digitalRead(9));
+  lastordernum2 = calculate_order_num(digitalRead(10),digitalRead(11));
   //stack[0] = 1;
 }
 
 void loop() {
     byte byteRead;
-
 
     /*==============================================================================================
     MAIN STATE MACHINE:
@@ -234,11 +181,10 @@ void loop() {
            }
         } 
         break;
-      case DECODE:
       /*=========================================
       DECODES Numbers 1-8 into appropriate angles
       =========================================*/
-        digitalWrite(13,HIGH);
+      case DECODE:
         for(int i = 0; i <= stack_counter; i++){ //Array to store the uploaded notes
             switch((int)stack[i]){
               case 1:
@@ -287,60 +233,34 @@ void loop() {
                 break;
             }
         }
-        /*if(currentAngle<stack[0]) direction = 1; //Sets initial direction of the motor
-        else{
-          direction = 0;
-        }*/
         delay(10);
         state = PLAY;
         break;
 
+      /*========================================================
+      THIS STATE RUNS THROUGH THE NOTES DECODED INTO A REGISTER
+      ========================================================*/
+
       case PLAY: //Running through notes state
-          /*========================================================
-          THIS STATE RUNS THROUGH THE NOTES DECODED INTO A REGISTER
-          ========================================================*/
-          //if(direction){ //checks if the motor supposed to go up or down 
-          delay(1);
-            if(done_flag2||1){
-              //right
-              set_speed(angle_out_r, &done_flag1, &done_flag2, &retract_flag1, &retract_flag2, &transition_flag, &trans2_flag, &j, &k, 0);
-            }
-            if(!done_flag2){
-                set_speed(angle_out_l, &done_flag2, &done_flag1, &retract_flag2, &retract_flag1, &trans2_flag, &transition_flag, &k, &j, 1);
-            }else {
-               // L_Motor_F_state = LOW;
-               // L_Motor_R_state = LOW;
-            }
-         
-          //state = RESET;
-          if(j>stack_counter||k>stack_counter) state = RESET;
-          break;
 
-      case DEBUG:
-      
-       /*  if (position < desiredPos_R){  //send right motor forward
-            R_Motor_F_state = HIGH;
-            R_Motor_R_state = LOW;
-         }
-         else if (position > desiredPos_R){  //send right motor forward
-            R_Motor_F_state = LOW;
-            R_Motor_R_state = HIGH;
-         }
-         else{
-            //stop robot movement
-            R_Motor_F_state = LOW;
-            R_Motor_R_state = LOW;
-            //digitalWrite(Motor_L_forward, LOW);
-            //digitalWrite(Motor_L_reverse, LOW);
-         }*/
-         break;
+        delay(1);
 
+        if(done_flag2||1){ //if arm 2 reached the designed position procede to move arm 1
+          set_speed(angle_out_r, &done_flag1, &done_flag2, &retract_flag1, &retract_flag2, &transition_flag, &trans2_flag, &j, &k, 0);
+        }
+
+        if(!done_flag2){
+          set_speed(angle_out_l, &done_flag2, &done_flag1, &retract_flag2, &retract_flag1, &trans2_flag, &transition_flag, &k, &j, 1);
+        }        
+        if(j>stack_counter||k>stack_counter) state = RESET; //if the stack is fully traversed, end the run
+        break;
+
+      case DEBUG:   
+        break;
       default: 
-          state = RESET;
-          break;
+        state = RESET;
+         break;
   }
-
-
 
   //ENCODER READING
   /*===========================================================================================
@@ -385,6 +305,22 @@ void loop() {
 /*===================================================================================
 SET OF FUNCTIONS FOR ISR, PID AND ANGLES
 ===================================================================================*/
+
+/*
+set_speed:
+Function chooses a direction to run the motor in and uses encoded speed value signalling appropriate
+3 bit signal to two arduinos. Movements work synchronosly with arms one waiting for the other to finish before proceding to the next
+movement
+Arguments: 
+  pid_correction: angle deviation of the current position which is used to determine the direction
+  done_flag_self: flag that signals if arm of the callee has reached the wanted position
+  done_flag_partner: flag that signals if arm of the non callee has reached the wanted position
+  retract_flag_self/partner: flag that signals whether the arm is in a rertracting state
+  trans_flag_self/partner: communication signal which is used to determine which transition took place
+  index_self/partner: current index of the stack relative to callee
+  callee_motor: which motor has called the function 0 being motor 1 and 1 being motor 2
+*/
+
 void set_speed(
   double pid_correction,
   bool *done_flag_self,
@@ -471,6 +407,13 @@ void set_speed(
     *trans_flag_self = 0;        
   }  
 }
+
+/*
+handle transition:
+this void function serves as a final check between transition of movements. 
+Arguments: none
+*/
+
 void handle_transition_1(){
   if(!transition_flag){
      done_flag1 = 1;
