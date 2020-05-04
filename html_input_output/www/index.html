@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 	<head>
+		<link href="stylesheet.css" rel="stylesheet" type="text/css">
 	</head>
 <!--<body onload="setInterval(refresh, 500);">--> 
 <body>
@@ -14,13 +15,25 @@
 	<input type="radio" name="LEDCheck" value="on" id="on" />
 	<label for="on">LED On</label><br>
 	</form>
+	<div class="slidecontainer">
+		<input type="range" min="0" max="8" value="0" class="slider" id="myRange">
+	</div>
+	<p>Value: <span id="demo"></span></p>
 	<br />
 		<div id="sensor_content">Loading data from Arduino...</div>
 		<div id="LED_content"></div>
 		<div id="LED_content_test"></div>
 		<script type="text/javascript" src="js/zepto.min.js"></script>
 		<script type="text/javascript" src="js/jsHere.js"></script>	
-
+		<script>
+			var slider = document.getElementById("myRange");
+			var output = document.getElementById("demo");
+			output.innerHTML = slider.value;
+			
+			slider.oninput = function() {
+			  output.innerHTML = this.value;
+			}
+		</script>
 	</body>
 
 </html>
