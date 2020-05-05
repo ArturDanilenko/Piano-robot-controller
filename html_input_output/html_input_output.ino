@@ -23,13 +23,10 @@ void setup() {
 void loop() { 
   int LED_choice;
   BridgeClient client = server.accept();  
-  client.println("client accepted");
   digitalWrite(led, HIGH);
-  delay(150);
-  client.println("delay 1 passed led should be low");
+  delay(50);
   digitalWrite(led, LOW);
-  delay(150);
-  client.println("delay 2 passed led should be low");
+  delay(50);
   if (client) { 
     String command = client.readStringUntil('/'); //Read in the string up to the frist
     command.trim();        //kill whitespace
@@ -47,12 +44,12 @@ void loop() {
         digitalWrite(led, LOW); //Turn the LED off by making the voltage LOW
       }
     }
-    client.println("commands executed");
+     
      // Close connection and free resources.
     client.stop();
     client.flush();//discard any bytes that have been written to client but not 
     //yet read.
     hits++; //increment the "hits" counter by 1.
   }    
-  client.println("if statement passed");
+  
 } 

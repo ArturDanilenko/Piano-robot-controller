@@ -63,10 +63,6 @@ double cumulative_error_r, rate_error_r;
 /*============================================================================
 UNO control
 ===================================================================================*/
-
-short int speedR = 20;
-short int speedL = 20;
-
 bool speed_1_bit_1_value = 0;
 bool speed_1_bit_2_value = 0;
 bool speed_1_bit_3_value = 1;
