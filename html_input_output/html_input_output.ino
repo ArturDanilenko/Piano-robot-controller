@@ -14,6 +14,7 @@ long hits = 0;
 int led=13; //hardware connection: Yún digital pin 7 to LED to 220 Ohm resistor to Ground.
 int val = 1;
 void setup() {
+  pinMode(13,OUTPUT);
   Bridge.begin();
  // Console.begin();
   server.listenOnLocalhost();
@@ -23,9 +24,9 @@ void setup() {
 void loop() { 
   int LED_choice;
   BridgeClient client = server.accept();  
-  digitalWrite(led, HIGH);
-  delay(50);
-  digitalWrite(led, LOW);
+  //digitalWrite(led, HIGH);
+  //delay(150);
+  //digitalWrite(led, LOW);
   delay(50);
   if (client) { 
     String command = client.readStringUntil('/'); //Read in the string up to the frist
