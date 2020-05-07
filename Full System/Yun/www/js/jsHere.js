@@ -16,7 +16,7 @@ function getSensorvalue() {
 		if (checked_option_radio =='off') //if the user selected for LED to be off, send request to Arduino
 		{
 			command = '/arduino/setspeed/0';
-			$('#LED_content').load(command);
+			//$('#LED_content').load(command);
 		}
 		
 		if (checked_option_radio =='on') //if the user selected for LED to be on, send request to Arduino

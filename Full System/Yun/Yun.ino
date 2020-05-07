@@ -62,19 +62,15 @@ unsigned long previous_time_l;
 double elapsed_time_l;
 double error_l;
 double prev_error_l;
-double angle_in_l, angle_out_l, setpoint_l;
+double angle_in_l, angle_out_l, setpoint_l = 0;
 double cumulative_error_l, rate_error_l;
-
-double angle_in[2];
-double xy_des[2];
-//double angle_in_r;
 
 unsigned long current_time_r;
 unsigned long previous_time_r;
 double elapsed_time_r;
 double error_r;
 double prev_error_r;
-double angle_in_r, angle_out_r, setpoint_r;
+double angle_in_r, angle_out_r, setpoint_r = 0;
 double cumulative_error_r, rate_error_r;
 
 /*============================================================================
@@ -102,20 +98,6 @@ PIN CONFIGURATION AND INITIALIZATION OF SOME VARIABLES
 
 
 void setup() { 
-  setpoint_l = 800;    //
-  setpoint_r = 600; 
-  stack[0] = 22.5;
-  stack[1] = 22.5;
-  stack[2] = 33.75;
-  stack[3] = 45;
-  stack[4] = 33.75;
-  
-  stack2[0] = 22.5;
-  stack2[1] = 22.5;
-  stack2[2] = 33.75;
-  stack2[3] = 45;
-  stack2[4] = 33.75;
-
   pinMode(encoder_1_A_pin, INPUT); //ENCODER 1 output A
   pinMode(encoder_1_B_pin, INPUT); // encoder 1 output B
   pinMode(encoder_2_A_pin, INPUT); //ENCODER 2 output A
@@ -142,9 +124,6 @@ void setup() {
   server.listenOnLocalhost();
   server.begin();
   FileSystem.begin();
-  //client.begin();
-  //while(!client);
-  //Serial.begin(9600); // Turn the Serial Protocol ON
 
   lastordernum = calculate_order_num(digitalRead(8),digitalRead(9));
   lastordernum2 = calculate_order_num(digitalRead(10),digitalRead(11));
@@ -153,10 +132,11 @@ void setup() {
 
 void loop() {
     BridgeClient client = server.accept();
-    delay(100);
-    digitalWrite(13,1);
-    delay(100);
-    digitalWrite(13,0);
+    //delay(50);
+    //digitalWrite(13,1);
+    delay(50);
+    //digitalWrite(13,0);
+    
     if(client){
  
       String command = client.readStringUntil('/');
@@ -217,17 +197,14 @@ void loop() {
           client.println(stack[i]);
           delay(5);
         }
-        
       }
       else{
         client.println("An unknown command has been sent");
         client.print("Current hit count: ");
         client.println(hits);
       }
-      // Close connection and free resources.
-      client.stop();
-      client.flush();//discard any bytes that have been written to client but not 
-      //yet read.
+      client.stop(); // Close connection and free resources.
+      client.flush();//discard any bytes that have been written to client but not yet read.
       hits++; //increment the "hits" counter by 1.
 
     }
@@ -309,11 +286,6 @@ void loop() {
   lastordernum = calculate_order_num(digitalRead(8), digitalRead(9));
   currentAngle_r = posToAngle(position);
 
-
-  /*===========================================================================
-  Encoder 2 code and CALCULATIONS
-  ==================================================================================*/
-
   encoder2_pos = calculate_encoder_rotation(digitalRead(10), digitalRead(11), lastordernum2, encoder2_pos);
   lastordernum2 = calculate_order_num(digitalRead(10), digitalRead(11)); //MAKE LAST ORDERNUM NEW FOR THE NEXT CYCLE
   currentAngle_l = posToAngle(encoder2_pos);
@@ -322,6 +294,7 @@ void loop() {
   /*====================================================================
   PID AND ANGLE CALCULATIONS
   ======================================================================*/
+
   setpoint_r = set_coordinate(retract_flag1, stack[j]);
   setpoint_l = set_coordinate(retract_flag2, stack2[k]);
  
@@ -438,13 +411,13 @@ Arguments:
   pid_correction: angle deviation of the current position which is used to determine the direction
   done_flag_self: flag that signals if arm of the callee has reached the wanted position
   done_flag_partner: flag that signals if arm of the non callee has reached the wanted position
-  retract_flag_self/partner: flag that signals whether the arm is in a rertracting state
+  retract_flag_self/partner:flag that signals whether the arm is in a rertracting state
   trans_flag_self/partner: communication signal which is used to determine which transition took place
   index_self/partner: current index of the stack relative to callee
   callee_motor: which motor has called the function 0 being motor 1 and 1 being motor 2
 */
 
-void choose_direction(
+void choose_direction( 
   double pid_correction,
   bool *done_flag_self,
   bool *done_flag_partner,
@@ -456,12 +429,6 @@ void choose_direction(
   short int *index_partner,
   bool callee_motor
   ){
-  speed_1_bit_1_value = 0;
-  speed_1_bit_2_value = 0;
-  speed_1_bit_3_value = 1;
-  speed_2_bit_1_value = 0;
-  speed_2_bit_2_value = 0;
-  speed_2_bit_3_value = 1;
   if (pid_correction>0){
     
     //client.print("uwu");

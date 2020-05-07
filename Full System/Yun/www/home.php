@@ -14,7 +14,22 @@ if (!isset($_SESSION['loggedin'])) {
 		<link href="stylesheet.css" rel="stylesheet" type="text/css">
 	</head>
     <body>
-        <p>Click the button to turn on and off the LED.</p>
+        <p>The following control panel allows you to control the Arduino Yun board which is the logic driver for a piano playing robot</p>
+        <br/>
+        <p>Few things to note: <br>
+        There is already an initial text file with coordinates uploaded onto the SD card of the the ATHEROS chip
+        ,hence if you do not upload your own coordinates, it will still work. <br>
+        The buttos for the commands can be pressed at any time, but establishing server-client connection is resouse consuming, 
+        so if you spam the buttons, one of the chips WILL CRASH. SO DONT SPAM IT.<br>
+        Readfile MUST be executed when YUN is either in RESET state or WAIT state. <br>
+        In the best case commands won't do anything, however the system is still being tested so unpredictable results are quite likely <br>
+        Decode MUST be executed when YUN is in WAIT state. This is only possible if some file has already been read as you cant decode an empty stack.<br>
+        Reading commands are connection heavy, so give them time and absolutely do not spam them.
+        Uploading can be done anytime as its handled by the server and requires no connection between Linux and Arduino side
+        Speed setter will only work if button is pressed. 
+        </p>
+        <br/>
+        <p>Click 'on' to enable speed reading</p>
         
         <form id="LED_Selection" action="">
             <input type="radio" name="LEDCheck" value="off" id="off" />
