@@ -1,3 +1,4 @@
+//"Adds on click functions to the buttons with that send commands via REST API"
 document.getElementById("readfile").onclick = function () {
    $('#command').load('/arduino/readfile/');
    //alert('readfile command has been sent!');

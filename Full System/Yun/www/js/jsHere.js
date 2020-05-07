@@ -5,21 +5,19 @@ $(function() {
 var oldcommand = "";
 
 function getSensorvalue() {
-    //This function gets sensor values from Arduino AND sends out a request to turn LED on
-	//$('#sensor_content').load('/arduino/temperature/'); //send a request for temperature/humidity data
-	//$('#LED_content').load('/arduino/temperature/1');
+    //This function sends the speed to the arduino
 	var checked_option_radio = $('input[name=LEDCheck]:checked','#LED_Selection').val();
 	var slider = document.getElementById("myRange");
 	command = '/arduino/setspeed/';
-	command = command + slider.value.toString();
+	command = command + slider.value.toString(); //parse the speed from the slider into the command to be sent to YUN
 	if(oldcommand!=command){
-		if (checked_option_radio =='off') //if the user selected for LED to be off, send request to Arduino
+		if (checked_option_radio =='off') //if the button is in off state, ignore the speed requests
 		{
 			command = '/arduino/setspeed/0';
 			//$('#LED_content').load(command);
 		}
 		
-		if (checked_option_radio =='on') //if the user selected for LED to be on, send request to Arduino
+		if (checked_option_radio =='on') //if the button is on send the chosen speed to YUN
 		{
 			$('#LED_content').load(command);
 		}

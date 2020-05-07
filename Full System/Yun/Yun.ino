@@ -131,19 +131,15 @@ void setup() {
 }
 
 void loop() {
-    BridgeClient client = server.accept();
-    //delay(50);
-    //digitalWrite(13,1);
+    BridgeClient client = server.accept(); //listens for the server connection
     delay(50);
-    //digitalWrite(13,0);
     
-    if(client){
+    if(client){ //if client is available or there is a pending command 
  
-      String command = client.readStringUntil('/');
+      String command = client.readStringUntil('/'); //get the command the follows arduino/ and ends before the next /
       command.trim(); //kills white space
-      client.println(external_message);
-      client.println('client connected');
-      if (command == "setspeed") {  //Check to see if the first part of the URL command     
+      client.println(external_message); // print an external message thats set int readfile or decode functions with success or error 
+      if (command == "setspeed") {  //if the command is setspeed check the integer that followed / and set it as the speed value  
         speed=client.parseInt();
         client.print("The received speed value:");
         client.println(speed);
@@ -151,14 +147,14 @@ void loop() {
         client.println(hits);
         delay(10);
       } 
-      else if (command == "decode") {  //Check to see if the first part of the URL command     
+      else if (command == "decode") {  //if command is decode check if the yun is in WAIT state and if it is set the next state to DECODE   
         client.println("The decoding command was received on the local host");
         client.print("Current hit count: ");
         client.println(hits);
         delay(10);
         if(state==WAIT)state = DECODE;
       }
-      else if (command == "readfile") {  //Check to see if the first part of the URL command     
+      else if (command == "readfile") {  //if readfile, check if to see if the YUN is in RESET or WAIT states and if it is set the next state to READFILE 
         client.println("The readfile command was received on the local host");
         client.print("Current hit count: ");
         client.println(hits);
@@ -168,7 +164,7 @@ void loop() {
           client.println("ERROR Yun must be in RESET or WAIT state to read a file");
         }
       }
-      else if (command == "play") {  //Check to see if the first part of the URL command     
+      else if (command == "play") {  //set the next state to PLAY if the current one WAIT   
         client.println("The play command was received on the local host");
         client.print("Current hit count: ");
         client.println(hits);
@@ -178,21 +174,21 @@ void loop() {
         }
         delay(10);
       }
-      else if (command == "reset") {  //Check to see if the first part of the URL command     
+      else if (command == "reset") {  //Reset the variables and send YUN to RESET state 
         client.println("The reset command was received on the local host");
         client.print("Current hit count: ");
         client.println(hits);
         state = RESET;
         delay(10);
       }
-      else if (command == "read") {  //Check to see if the first part of the URL command     
+      else if (command == "read") {  //displays current location and PID settings  
         client.println("The read command was received on the local host");
         client.print("Current hit count: ");
         client.println(hits);
         display_properties(client);
         delay(10);
       }
-      else if (command == "display_stack"){
+      else if (command == "display_stack"){ //displays values in the stack 
         for(int i = 0;i<stack_counter;i++){
           client.println(stack[i]);
           delay(5);
@@ -208,18 +204,18 @@ void loop() {
       hits++; //increment the "hits" counter by 1.
 
     }
-     
+    //set the speed before the PID control 
     set_speed(speed);
 
     /*==============================================================================================
     MAIN STATE MACHINE:
-    1)RESET: Initial and completion state
-    2) RCV: Receiving the text file state. Enables another device to upload a text file onto the board and store
-    it in a stack that can be accessed later
-    3) PLAY: AS OF RIGHT NOW RUNS THROUGH THE PATTERN OUTLINED IN THE stack
-    LATER WILL BE TRANSLATED INTO ARM POSITIONS
+    1)RESET: Initial and completion state that sets everything to the starting conditions
+    2) READFILE: Reads a file that was uploaded onto the SD card through the server running on Atheros chip
+    3) PLAY: Runs through the coordinates decoded into the stack register using PID controls 
+    4) DECODE: Decodes the "notes" passed through the file on the SD card into anglular postions for the arm
+    5) WAIT: A state where Yun rests between READFILE and DECODE states waiting for the command to play
 
-    4)DEBUG: DEBUGGING STATE USED FOR TESTING SPECIFIC FEAUTURES.
+    6)DEBUG: DEBUGGING STATE USED FOR TESTING SPECIFIC FEAUTURES.
     INACCESIBLE IN A REGULAR RUN
     =================================================================================================*/
 
@@ -274,13 +270,7 @@ void loop() {
       break;
   }
 
-  //ENCODER READING
-  /*===========================================================================================
-  THERE ARE 4 POSSIBLE POSITIONS WHICH CAN BE ORGANIZED IN AN ORDER FROM 0 - 3
-  AFTER, WE CAN CHECK IF THE NEW POSITION IS ORDER UP OR BEFORE FROM THE PREVIOUS ONE 
-  AND USING THIS WE CAN DETERMINE IF WE ROTATED CW OR CCW
-  ============================================================================================*/
-
+  //Reading the encoders
 
   position = calculate_encoder_rotation(digitalRead(8), digitalRead(9), lastordernum, position);
   lastordernum = calculate_order_num(digitalRead(8), digitalRead(9));
@@ -291,21 +281,13 @@ void loop() {
   currentAngle_l = posToAngle(encoder2_pos);
 
    
-  /*====================================================================
-  PID AND ANGLE CALCULATIONS
-  ======================================================================*/
+  //setting the angles towards which we want to move 
 
   setpoint_r = set_coordinate(retract_flag1, stack[j]);
   setpoint_l = set_coordinate(retract_flag2, stack2[k]);
  
   angle_out_l = computePIDleft(currentAngle_l);
   angle_out_r = computePIDright(currentAngle_r);
-
-  if(prevPos!=position||encoder2_pos_prev!=encoder2_pos&&1){ //PRINTING FUNCTION. WILL PRINT ONLY IF THE VALUES ARE DIFFERENT
-      //display_properties();
-      prevPos = position;
-      encoder2_pos_prev = encoder2_pos;
-  }
 }
 
 
@@ -321,6 +303,14 @@ void stop_pins(){
   digitalWrite(speed_1_bit_2_pin,0);
   digitalWrite(speed_1_bit_3_pin,0);
 }
+
+/*
+readFile:
+Reads the provided file thats stored on the SD card which represents the notes that the robot is supposed to play
+9 signals the end of the file. 252 is rolled over value for comme ',' hence we have to ignore it given that the provided
+file is set using them.
+Arguments: none
+*/
 
 void readFile(){
   File dataFile = FileSystem.open("/mnt/sda1/arduino/www/Yun/uploads/text.txt", FILE_READ);
@@ -342,6 +332,13 @@ void readFile(){
   }
 }
 
+/*
+set-speed:
+sets the speed driving wires to the bit logic supplied from the web control pane and stored in the variable speed;
+Arguments: 
+  desired_speed: the value that was received from the webcontrol panel 
+*/
+
 void set_speed(short int desired_speed){
   speed_1_bit_1_value = desired_speed/4;
   speed_1_bit_2_value = (desired_speed%4)/2;
@@ -350,6 +347,13 @@ void set_speed(short int desired_speed){
   speed_2_bit_2_value = (desired_speed%4)/2;
   speed_2_bit_3_value = desired_speed%2;
 }
+
+/*
+decode_notes:
+Provided that the stack registers are filled up with the coordinates from the uploaded file and given stack counter being non 0
+decodes the number in the stack into coordinates which represent degree positions for each arm
+Arguments: none (uses global variables);
+*/
 
 void decode_notes(){
   for(int i = 0; i <= stack_counter; i++){ //Array to store the uploaded notes
