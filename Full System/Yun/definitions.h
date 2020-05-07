@@ -2,6 +2,8 @@
 #define RCV 1
 #define PLAY 2
 #define DECODE 3
+#define READFILE 4
+#define WAIT 5
 #define DEBUG 69
 
 #define POSITION_TO_ANGLE_RATIO 11.25

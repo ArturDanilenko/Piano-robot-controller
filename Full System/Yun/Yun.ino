@@ -1,20 +1,37 @@
-#include <Console.h>
+#include <client.h>
 #include <Bridge.h>
+#include <BridgeServer.h>
+#include <BridgeClient.h>
+#include <FileIO.h>
 #include "math.h"
 #include "definitions.h"
 
+/*======================================================
+Web communication variables
+======================================================*/
+BridgeServer server;
+String startString;
+long hits;
+short int speed = 0;
+String external_message = "";
+
+/*======================================================
+SDCard communication variables
+======================================================*/
+byte readbyte;
+File dataFile;
 /*===================================================================================
 Registers for the data passed from the text file.
 ===================================================================================*/
-double stack[100];
-double stack2[100]; 
-short int stack_counter = 5; //for debugging is set to 5
+double stack[50];
+double stack2[50]; 
+short int stack_counter = 0; 
 
 //FLAG FOR END OF RECEVING
 bool done = 0;
 
 //INITIAL STATE
-short int state = PLAY;
+short int state = RESET;
 
 /*===================================================================================
 ENCODER VARIABLES
@@ -122,9 +139,12 @@ void setup() {
   digitalWrite(speed_1_bit_3_pin,0);
 
   Bridge.begin();
-  Console.begin();
-  while(!Console);
-  Serial.begin(9600); // Turn the Serial Protocol ON
+  server.listenOnLocalhost();
+  server.begin();
+  FileSystem.begin();
+  //client.begin();
+  //while(!client);
+  //Serial.begin(9600); // Turn the Serial Protocol ON
 
   lastordernum = calculate_order_num(digitalRead(8),digitalRead(9));
   lastordernum2 = calculate_order_num(digitalRead(10),digitalRead(11));
@@ -132,7 +152,87 @@ void setup() {
 }
 
 void loop() {
-    byte byteRead;
+    BridgeClient client = server.accept();
+    delay(100);
+    digitalWrite(13,1);
+    delay(100);
+    digitalWrite(13,0);
+    if(client){
+ 
+      String command = client.readStringUntil('/');
+      command.trim(); //kills white space
+      client.println(external_message);
+      client.println('client connected');
+      if (command == "setspeed") {  //Check to see if the first part of the URL command     
+        speed=client.parseInt();
+        client.print("The received speed value:");
+        client.println(speed);
+        client.print("Current hit count: ");
+        client.println(hits);
+        delay(10);
+      } 
+      else if (command == "decode") {  //Check to see if the first part of the URL command     
+        client.println("The decoding command was received on the local host");
+        client.print("Current hit count: ");
+        client.println(hits);
+        delay(10);
+        if(state==WAIT)state = DECODE;
+      }
+      else if (command == "readfile") {  //Check to see if the first part of the URL command     
+        client.println("The readfile command was received on the local host");
+        client.print("Current hit count: ");
+        client.println(hits);
+        delay(10);
+        if(state==RESET||state==WAIT)state = READFILE;
+        else {
+          client.println("ERROR Yun must be in RESET or WAIT state to read a file");
+        }
+      }
+      else if (command == "play") {  //Check to see if the first part of the URL command     
+        client.println("The play command was received on the local host");
+        client.print("Current hit count: ");
+        client.println(hits);
+        if(state==WAIT)state = PLAY;
+        else {
+          client.println("ERROR. Yun must be in WAIT state before playing!");
+        }
+        delay(10);
+      }
+      else if (command == "reset") {  //Check to see if the first part of the URL command     
+        client.println("The reset command was received on the local host");
+        client.print("Current hit count: ");
+        client.println(hits);
+        state = RESET;
+        delay(10);
+      }
+      else if (command == "read") {  //Check to see if the first part of the URL command     
+        client.println("The read command was received on the local host");
+        client.print("Current hit count: ");
+        client.println(hits);
+        display_properties(client);
+        delay(10);
+      }
+      else if (command == "display_stack"){
+        for(int i = 0;i<stack_counter;i++){
+          client.println(stack[i]);
+          delay(5);
+        }
+        
+      }
+      else{
+        client.println("An unknown command has been sent");
+        client.print("Current hit count: ");
+        client.println(hits);
+      }
+      // Close connection and free resources.
+      client.stop();
+      client.flush();//discard any bytes that have been written to client but not 
+      //yet read.
+      hits++; //increment the "hits" counter by 1.
+
+    }
+     
+    set_speed(speed);
 
     /*==============================================================================================
     MAIN STATE MACHINE:
@@ -146,24 +246,33 @@ void loop() {
     INACCESIBLE IN A REGULAR RUN
     =================================================================================================*/
 
-
     switch (state) { //State machine
 
       case RESET:  //Resting state/waiting to start or have the processing file started
-        stack_counter = 0;
-        digitalWrite(2, LOW);  //Lights up LED 2
-        digitalWrite(3, LOW);  //Lights up LED 2
-        digitalWrite(5, LOW);  //Lights up LED 2
-        digitalWrite(6, LOW);  //Lights up LED 2
-        if(digitalRead(4)){ //Checks if the button is not pressed
-           digitalWrite(3, LOW); //lights up LED 1
-        }
-        else {
-          digitalWrite(3, LOW); //Turns LEDS off if the button is pressed
-          digitalWrite(2, LOW);
-          state = RCV;
-          byteRead = 0;
-        }
+        stop_pins();
+        stack_counter=0;
+        j = 0;
+        k = 0;
+        retract_flag1 = 0;
+        retract_flag2 = 0;
+        done_flag1 = 0;
+        done_flag2 = 0;
+        transition_flag = 1;
+        trans2_flag = 0;
+      break;
+
+      case WAIT:
+        stop_pins();
+      break;
+
+      case READFILE:
+        readFile();
+        state = WAIT;
+      break;
+
+      case DECODE:
+        decode_notes();
+        state = WAIT;
       break;
       /*========================================================
       THIS STATE RUNS THROUGH THE NOTES DECODED INTO A REGISTER
@@ -172,16 +281,17 @@ void loop() {
       case PLAY: //Running through notes state
         delay(1);
         if(done_flag2){ //if arm 2 reached the designed position procede to move arm 1
-          set_speed(angle_out_r, &done_flag1, &done_flag2, &retract_flag1, &retract_flag2, &transition_flag, &trans2_flag, &j, &k, 0);
+          choose_direction(angle_out_r, &done_flag1, &done_flag2, &retract_flag1, &retract_flag2, &transition_flag, &trans2_flag, &j, &k, 0);
         }
         if(!done_flag2){
-          set_speed(angle_out_l, &done_flag2, &done_flag1, &retract_flag2, &retract_flag1, &trans2_flag, &transition_flag, &k, &j, 1);
+          choose_direction(angle_out_l, &done_flag2, &done_flag1, &retract_flag2, &retract_flag1, &trans2_flag, &transition_flag, &k, &j, 1);
         }        
         if(j>stack_counter||k>stack_counter) state = RESET; //if the stack is fully traversed, end the run
       break;
 
       case DEBUG:   
       break;
+
       default: 
         state = RESET;
       break;
@@ -219,7 +329,7 @@ void loop() {
   angle_out_r = computePIDright(currentAngle_r);
 
   if(prevPos!=position||encoder2_pos_prev!=encoder2_pos&&1){ //PRINTING FUNCTION. WILL PRINT ONLY IF THE VALUES ARE DIFFERENT
-      display_properties();
+      //display_properties();
       prevPos = position;
       encoder2_pos_prev = encoder2_pos;
   }
@@ -230,7 +340,43 @@ void loop() {
 /*===================================================================================
 SET OF FUNCTIONS FOR ISR, PID AND ANGLES
 ===================================================================================*/
+void stop_pins(){
+  digitalWrite(speed_2_bit_1_pin,0);
+  digitalWrite(speed_2_bit_2_pin,0);
+  digitalWrite(speed_2_bit_3_pin,0);
+  digitalWrite(speed_1_bit_1_pin,0);
+  digitalWrite(speed_1_bit_2_pin,0);
+  digitalWrite(speed_1_bit_3_pin,0);
+}
 
+void readFile(){
+  File dataFile = FileSystem.open("/mnt/sda1/arduino/www/Yun/uploads/text.txt", FILE_READ);
+  if (dataFile) {
+    readbyte = dataFile.read();
+    readbyte = readbyte - '0';
+    while(readbyte != 9){
+       if(readbyte != 252 ) {
+        stack[stack_counter] = readbyte;
+        stack_counter++;
+       }
+       readbyte = dataFile.read() - '0';
+    }
+    external_message = "Success reading the coordinate file";
+    dataFile.close();
+  }
+  else {
+    external_message = "Error reading from the coordinate file";
+  }
+}
+
+void set_speed(short int desired_speed){
+  speed_1_bit_1_value = desired_speed/4;
+  speed_1_bit_2_value = (desired_speed%4)/2;
+  speed_1_bit_3_value = desired_speed%2;
+  speed_2_bit_1_value = desired_speed/4;
+  speed_2_bit_2_value = (desired_speed%4)/2;
+  speed_2_bit_3_value = desired_speed%2;
+}
 
 void decode_notes(){
   for(int i = 0; i <= stack_counter; i++){ //Array to store the uploaded notes
@@ -284,7 +430,7 @@ void decode_notes(){
 }
 
 /*
-set_speed:
+choose_direction:
 Function chooses a direction to run the motor in and uses encoded speed value signalling appropriate
 3 bit signal to two arduinos. Movements work synchronosly with arms one waiting for the other to finish before proceding to the next
 movement
@@ -298,7 +444,7 @@ Arguments:
   callee_motor: which motor has called the function 0 being motor 1 and 1 being motor 2
 */
 
-void set_speed(
+void choose_direction(
   double pid_correction,
   bool *done_flag_self,
   bool *done_flag_partner,
@@ -318,7 +464,7 @@ void set_speed(
   speed_2_bit_3_value = 1;
   if (pid_correction>0){
     
-    //Console.print("uwu");
+    //client.print("uwu");
     if(callee_motor){
       digitalWrite(dir_pin_2,LOW);
       digitalWrite(speed_2_bit_1_pin,speed_2_bit_1_value);
@@ -332,7 +478,7 @@ void set_speed(
     }
   }
   else if (pid_correction<0){
-    //Console.print("awa");
+    //client.print("awa");
     if(callee_motor){
       digitalWrite(dir_pin_2,HIGH);
       digitalWrite(speed_2_bit_1_pin,speed_2_bit_1_value);
@@ -361,7 +507,7 @@ void set_speed(
       //Serial.print("12 done in 2 \n");
       if(*retract_flag_self){
         *index_self=*index_self+1;
-        //Console.print("qwq");
+        //client.print("qwq");
         //Serial.print("k2 incremented \n");
         *retract_flag_self = 0;
       } else {
@@ -404,7 +550,7 @@ void handle_transition_1(){
 void handle_transition_2(){
   if(!transition_flag&&!trans2_flag){
     done_flag2 = 1;
-    Console.print("uwu");
+    //client.print("uwu");
   }
   else {
     transition_flag = 0;
@@ -499,85 +645,85 @@ Arguments:
 None
 */
 
-void display_properties(){
-      Console.print(position);
-      Console.print("\t");/*
+void display_properties(BridgeClient client){
+      client.print(position);
+      client.print("\t");/*
 
-      Console.print(" Position 2 is: ");
-      Console.print(encoder2_pos);
-      Console.print("\t");*/
+      client.print(" Position 2 is: ");
+      client.print(encoder2_pos);
+      client.print("\t");*/
 
-      Console.print("Angle Right  is: ");
-      Console.print(currentAngle_r);
-      Console.print("\t");
+      client.print("Angle Right  is: ");
+      client.print(currentAngle_r);
+      client.print("\t");
 
-      Console.print(" Angle Left is: ");
-      Console.print(currentAngle_l);
-      Console.print("\n");
+      client.print(" Angle Left is: ");
+      client.print(currentAngle_l);
+      client.print("\n");
 
-      /*Console.print("Current Stack Value: ");
-      Console.print(stack[j]);
-      Console.print("\t");
+      /*client.print("Current Stack Value: ");
+      client.print(stack[j]);
+      client.print("\t");
 
-      Console.print("Current Stack k Value: ");
-      Console.print(stack[k]);
-      Console.print("\n");
+      client.print("Current Stack k Value: ");
+      client.print(stack[k]);
+      client.print("\n");
 
-      Console.print("Current State Value: ");
-      Console.print(state);
-      Console.print("\n");*/
+      client.print("Current State Value: ");
+      client.print(state);
+      client.print("\n");*/
 
-     /* Console.print("Current direction Value: ");
-      Console.print(direction);
-      Console.print("\n");*/
+     /* client.print("Current direction Value: ");
+      client.print(direction);
+      client.print("\n");*/
 
-      Console.print("Current j Value: ");
-      Console.print(j);
-      Console.print("\t");/*
+      client.print("Current j Value: ");
+      client.print(j);
+      client.print("\t");/*
 
-      Console.print("Current k Value: ");
-      Console.print(k);
-      Console.print("\n");*/
+      client.print("Current k Value: ");
+      client.print(k);
+      client.print("\n");*/
 
-      Console.print("Current state Value: ");
-      Console.print(state);
-      Console.print("\t");
+      client.print("Current state Value: ");
+      client.print(state);
+      client.print("\t");
 
-      Console.print("Current PID Value: ");
-      Console.print(angle_out_r);
-      Console.print("\t");
+      client.print("Current PID right Value: ");
+      client.print(angle_out_r);
+      client.print("\t");
 
-      Console.print("Current PID left Value: ");
-      Console.print(angle_out_l);
-      Console.print("\n");
+      client.print("Current PID left Value: ");
+      client.print(angle_out_l);
+      client.print("\n");
 
-      Console.print("Current setpoint right Value: ");
-      Console.print(setpoint_r);
-      Console.print("\t");
+      client.print("Current setpoint right Value: ");
+      client.print(setpoint_r);
+      client.print("\t");
 
-      Console.print("Current setpoint left Value: ");
-      Console.print(setpoint_l);
-      Console.print("\n");
+      client.print("Current setpoint left Value: ");
+      client.print(setpoint_l);
+      client.print("\n");
 
-      Console.print("done flag 1: ");
-      Console.print(done_flag1);
-      Console.print("\n");
+      /*client.print("done flag 1: ");
+      client.print(done_flag1);
+      client.print("\n");
 
-      Console.print("done flag 2: ");
-      Console.print(done_flag2);
-      Console.print("\n");
+      client.print("done flag 2: ");
+      client.print(done_flag2);
+      client.print("\n");
 
-      Console.print("retract_flag1: ");
-      Console.print(retract_flag1);
-      Console.print("\n");
+      client.print("retract_flag1: ");
+      client.print(retract_flag1);
+      client.print("\n");
 
-      Console.print("retract_flag2: ");
-      Console.print(retract_flag2);
-      Console.print("\n");
+      client.print("retract_flag2: ");
+      client.print(retract_flag2);
+      client.print("\n");
 
-      Console.print("trans flag 1: ");
-      Console.print(transition_flag);
-      Console.print("\n");
+      client.print("trans flag 1: ");
+      client.print(transition_flag);
+      client.print("\n");*/
 
 }
 

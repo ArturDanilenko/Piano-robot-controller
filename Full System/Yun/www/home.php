@@ -28,9 +28,13 @@ if (!isset($_SESSION['loggedin'])) {
             <button type = "submit" name="submit">UPLOAD</button>
         </form><br/>
         
-        <form id="my-form">
-            <input type="text" name="in" value="some data" />
-            <button type="submit">Go</button>
+        <form id="my-form" action ="">
+            <button type="submit" id="readfile">Readfile</button>
+            <button type="submit" id="decode">Decode</button>
+            <button type="submit" id="play">Play</button>
+            <button type="submit" id="read">Read</button>
+            <button type="submit" id="reset">Reset</button>
+            <button type="submit" id="readstack">Readstack values</button>
         </form>
         
         <br/>
@@ -39,7 +43,7 @@ if (!isset($_SESSION['loggedin'])) {
         </div>
         <p>Value: <span id="demo"></span></p>
         <br/>
-        
+        <div id="command"></div>
         <div id="LED_content"></div>
         <script type="text/javascript" src="js/zepto.min.js"></script>
         <script type="text/javascript" src="js/jsHere.js"></script>	
@@ -52,7 +56,7 @@ if (!isset($_SESSION['loggedin'])) {
             output.innerHTML = this.value;
             }
         </script>
-        <script type = "text/javascript" src="js/CommandField/js"></script>
+        <script type = "text/javascript" src="js/commands.js"></script>
 
     </body>
 
